@@ -1,0 +1,69 @@
+﻿:root {
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  color: #1f2937;
+  background: radial-gradient(circle at top right, #f5ebcf, #ead39c 40%, #d8b676 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.controls,
+.row-gap {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.controls {
+  margin-bottom: 16px;
+}
+
+button {
+  border: 1px solid #6a4f1f;
+  background: #f8e8be;
+  color: #2a1905;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.active {
+  background: #5f3f14;
+  color: #fff;
+}
+
+textarea,
+input,
+select {
+  padding: 8px;
+  border: 1px solid #b98f42;
+  border-radius: 8px;
+}
+
+.sgf-panel,
+.online-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 245, 220, 0.85);
+  border: 1px solid rgba(130, 90, 22, 0.35);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding: 12px;
+  }
+}
