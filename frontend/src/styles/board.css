@@ -126,6 +126,13 @@ select {
   aspect-ratio: 1 / 1;
   overflow: auto;
   border-radius: 16px;
+  border: 1px solid rgba(96, 60, 12, 0.32);
+  background: rgba(255, 245, 220, 0.5);
+}
+
+.board-surface {
+  min-width: min(92vw, 760px);
+  height: 100%;
 }
 
 .go-board {

@@ -1,7 +1,8 @@
 ﻿import React, { useEffect, useRef, useState } from "react";
 import Board from "../Board";
 import { chooseAIMove } from "../AIPlayer";
-import { passTurn, playMove } from "../goLogic";
+import type { AIDifficulty } from "../AIPlayer";
+import { createInitialState, passTurn, playMove, replayMoves, undoLastMove } from "../goLogic";
 import type { GameState } from "../goLogic";
 
 interface AIPlayProps {
@@ -12,16 +13,19 @@ interface AIPlayProps {
 }
 
 const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme }) => {
+  const [difficulty, setDifficulty] = useState<AIDifficulty>("medium");
   const [message, setMessage] = useState("你執黑，AI 執白");
   const [aiThinking, setAiThinking] = useState(false);
   const aiTimer = useRef<number | null>(null);
+
+  const saveKey = `go-ai-${size}-${difficulty}`;
 
   useEffect(() => {
     if (state.gameOver || state.turn !== "W") return;
 
     setAiThinking(true);
     aiTimer.current = window.setTimeout(() => {
-      const aiMove = chooseAIMove(state, "W");
+      const aiMove = chooseAIMove(state, "W", difficulty);
       if (!aiMove) {
         onStateChange(passTurn(state));
         setMessage("AI Pass");
@@ -32,15 +36,15 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
       const result = playMove(state, aiMove.row, aiMove.col);
       if (result.ok) {
         onStateChange(result.state);
-        setMessage("AI 已回應");
+        setMessage(`AI 已回應（${difficulty}）`);
       }
       setAiThinking(false);
-    }, 360);
+    }, 320);
 
     return () => {
       if (aiTimer.current) window.clearTimeout(aiTimer.current);
     };
-  }, [state, onStateChange]);
+  }, [state, onStateChange, difficulty]);
 
   const onPlay = (row: number, col: number) => {
     if (state.turn !== "B" || aiThinking) {
@@ -64,10 +68,88 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
     setMessage("你選擇 Pass");
   };
 
+  const onUndo = () => {
+    if (!state.moves.length || aiThinking) {
+      setMessage("目前無法悔棋");
+      return;
+    }
+
+    let next = undoLastMove(state, 1);
+    if (next.turn !== "B" && next.moves.length) {
+      next = undoLastMove(next, 1);
+    }
+
+    onStateChange(replayMoves(next.size, next.moves));
+    setMessage("已回退到玩家回合");
+  };
+
+  const onReset = () => {
+    const ok = window.confirm("確認重設 AI 對局？");
+    if (!ok) return;
+    onStateChange(createInitialState(size));
+    setMessage("AI 棋局已重設");
+  };
+
+  const onSave = () => {
+    localStorage.setItem(saveKey, JSON.stringify({ state, difficulty }));
+    setMessage("已保存 AI 棋局");
+  };
+
+  const onLoad = () => {
+    const raw = localStorage.getItem(saveKey);
+    if (!raw) {
+      setMessage("沒有可載入的 AI 棋局");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as { state: GameState; difficulty: AIDifficulty };
+      if (!parsed?.state || parsed.state.size !== size) {
+        setMessage("保存檔與目前棋盤大小不符");
+        return;
+      }
+
+      setDifficulty(parsed.difficulty ?? "medium");
+      onStateChange(parsed.state);
+      setMessage("已載入 AI 棋局");
+    } catch {
+      setMessage("載入失敗，保存資料損壞");
+    }
+  };
+
   return (
     <section className="mode-panel">
       <h2>對 AI（{size} x {size}）</h2>
       <p>{message}</p>
+
+      <div className="row-gap">
+        <label htmlFor="ai-difficulty" className="field-row">
+          AI 難度
+          <select
+            id="ai-difficulty"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as AIDifficulty)}
+            disabled={aiThinking}
+          >
+            <option value="easy">簡單（隨機合法）</option>
+            <option value="medium">中等（棋形評估）</option>
+            <option value="hard">困難（攻防預判）</option>
+          </select>
+        </label>
+        <button type="button" onClick={onUndo}>
+          Undo
+        </button>
+        <button type="button" onClick={onReset}>
+          Reset
+        </button>
+        <button type="button" onClick={onSave}>
+          保存
+        </button>
+        <button type="button" onClick={onLoad}>
+          載入
+        </button>
+      </div>
+
       <Board state={state} onPlay={onPlay} onPass={onPass} stoneTheme={stoneTheme} />
     </section>
   );

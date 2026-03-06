@@ -9,6 +9,8 @@ import "./styles/board.css";
 
 type ModeKey = "local" | "ai" | "tutorial" | "puzzle";
 
+const BOARD_SIZES = [5, 6, 7, 8, 9, 11, 13, 15, 17, 19];
+
 const modeList: Array<{ key: ModeKey; label: string; badge: string }> = [
   { key: "local", label: "本地雙人", badge: "LOCAL" },
   { key: "ai", label: "對 AI", badge: "AI" },
@@ -22,10 +24,10 @@ function hasUnfinishedMoves(state: GameState): boolean {
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<ModeKey>("local");
-  const [localSize, setLocalSize] = useState(5);
-  const [aiSize, setAiSize] = useState(5);
-  const [localState, setLocalState] = useState<GameState>(createInitialState(5));
-  const [aiState, setAiState] = useState<GameState>(createInitialState(5));
+  const [localSize, setLocalSize] = useState(9);
+  const [aiSize, setAiSize] = useState(9);
+  const [localState, setLocalState] = useState<GameState>(createInitialState(9));
+  const [aiState, setAiState] = useState<GameState>(createInitialState(9));
   const [stoneTheme, setStoneTheme] = useState<"classic" | "contrast">("classic");
   const [notice, setNotice] = useState("已啟用雙擊確認落子，降低誤觸。");
 
@@ -39,6 +41,29 @@ const App: React.FC = () => {
     }
 
     setMode(next);
+  };
+
+  const handleSizeChange = (next: number) => {
+    if (mode === "local") {
+      if (hasUnfinishedMoves(localState)) {
+        const save = window.confirm("切換棋盤大小會重設目前本地棋局。是否先保存進度？");
+        if (save) localStorage.setItem(`go-local-${localSize}`, JSON.stringify(localState));
+      }
+      setLocalSize(next);
+      setLocalState(createInitialState(next));
+      setNotice(`已切換本地對局棋盤尺寸為 ${next}x${next}。`);
+      return;
+    }
+
+    if (mode === "ai") {
+      if (hasUnfinishedMoves(aiState)) {
+        const save = window.confirm("切換棋盤大小會重設目前 AI 棋局。是否先保存進度？");
+        if (save) localStorage.setItem(`go-ai-${aiSize}-medium`, JSON.stringify({ state: aiState, difficulty: "medium" }));
+      }
+      setAiSize(next);
+      setAiState(createInitialState(next));
+      setNotice(`已切換 AI 對局棋盤尺寸為 ${next}x${next}。`);
+    }
   };
 
   return (
@@ -69,21 +94,9 @@ const App: React.FC = () => {
             <select
               id="board-size"
               value={mode === "local" ? localSize : aiSize}
-              onChange={(e) => {
-                const next = Number(e.target.value);
-                if (mode === "local") {
-                  setLocalSize(next);
-                  setLocalState(createInitialState(next));
-                  setNotice("已切換本地對局棋盤尺寸並重設棋局。");
-                }
-                if (mode === "ai") {
-                  setAiSize(next);
-                  setAiState(createInitialState(next));
-                  setNotice("已切換 AI 對局棋盤尺寸並重設棋局。");
-                }
-              }}
+              onChange={(e) => handleSizeChange(Number(e.target.value))}
             >
-              {[5, 6, 7, 8].map((s) => (
+              {BOARD_SIZES.map((s) => (
                 <option key={s} value={s}>
                   {s} x {s}
                 </option>

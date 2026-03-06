@@ -30,6 +30,7 @@ const Board: React.FC<BoardProps> = ({
   const { size, board, lastMove, turn, captures, moveNumber, passCount, gameOver, winner } = state;
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
   const [confirmHint, setConfirmHint] = useState("點一下選擇位置，再點一次確認落子");
+  const [zoom, setZoom] = useState(1);
 
   const padding = 48;
   const grid = (BOARD_PIXEL - padding * 2) / (size - 1);
@@ -44,8 +45,6 @@ const Board: React.FC<BoardProps> = ({
 
   const findIntersection = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-
-    // 使用相對座標換算，避免不同螢幕縮放造成偏移
     const px = ((event.clientX - rect.left) / rect.width) * BOARD_PIXEL;
     const py = ((event.clientY - rect.top) / rect.height) * BOARD_PIXEL;
 
@@ -57,7 +56,6 @@ const Board: React.FC<BoardProps> = ({
 
     if (row < 0 || row >= size || col < 0 || col >= size) return null;
 
-    // 觸控誤差修正：容許落在格點周邊範圍即吸附到中心
     const threshold = 0.52;
     if (Math.abs(cFloat - col) > threshold || Math.abs(rFloat - row) > threshold) return null;
 
@@ -91,87 +89,92 @@ const Board: React.FC<BoardProps> = ({
     setConfirmHint(`已選擇 (${point.row}, ${point.col})，再次點擊確認`);
   };
 
+  const zoomIn = () => setZoom((z) => Math.min(2.2, Number((z + 0.2).toFixed(1))));
+  const zoomOut = () => setZoom((z) => Math.max(1, Number((z - 0.2).toFixed(1))));
+
   return (
     <div className="board-layout">
       <div className="board-panel">
         <div className="board-stage">
-          <svg
-            className="go-board"
-            viewBox={`0 0 ${BOARD_PIXEL} ${BOARD_PIXEL}`}
-            onPointerDown={handleBoardPointer}
-            role="button"
-            aria-label="go-board"
-          >
-            <defs>
-              <linearGradient id={woodGradientId} x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#e8c785" />
-                <stop offset="55%" stopColor="#d8aa61" />
-                <stop offset="100%" stopColor="#be8a45" />
-              </linearGradient>
-              <pattern id={woodTextureId} width="12" height="12" patternUnits="userSpaceOnUse">
-                <path d="M0 6 H12" stroke="rgba(110,63,12,0.12)" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodGradientId})`} />
-            <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodTextureId})`} />
+          <div className="board-surface" style={{ width: `${zoom * 100}%` }}>
+            <svg
+              className="go-board"
+              viewBox={`0 0 ${BOARD_PIXEL} ${BOARD_PIXEL}`}
+              onPointerDown={handleBoardPointer}
+              role="button"
+              aria-label="go-board"
+            >
+              <defs>
+                <linearGradient id={woodGradientId} x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#e8c785" />
+                  <stop offset="55%" stopColor="#d8aa61" />
+                  <stop offset="100%" stopColor="#be8a45" />
+                </linearGradient>
+                <pattern id={woodTextureId} width="12" height="12" patternUnits="userSpaceOnUse">
+                  <path d="M0 6 H12" stroke="rgba(110,63,12,0.12)" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodGradientId})`} />
+              <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodTextureId})`} />
 
-            {Array.from({ length: size }, (_, i) => (
-              <g key={`line-${i}`}>
-                <line x1={toPoint(0)} y1={toPoint(i)} x2={toPoint(size - 1)} y2={toPoint(i)} className="grid-line" />
-                <line x1={toPoint(i)} y1={toPoint(0)} x2={toPoint(i)} y2={toPoint(size - 1)} className="grid-line" />
-              </g>
-            ))}
-
-            {showCoords &&
-              Array.from({ length: size }, (_, i) => (
-                <g key={`coord-${i}`}>
-                  <text x={toPoint(i)} y={24} className="coord-text">
-                    {makeColumnLabel(i)}
-                  </text>
-                  <text x={22} y={toPoint(i) + 5} className="coord-text">
-                    {size - i}
-                  </text>
+              {Array.from({ length: size }, (_, i) => (
+                <g key={`line-${i}`}>
+                  <line x1={toPoint(0)} y1={toPoint(i)} x2={toPoint(size - 1)} y2={toPoint(i)} className="grid-line" />
+                  <line x1={toPoint(i)} y1={toPoint(0)} x2={toPoint(i)} y2={toPoint(size - 1)} className="grid-line" />
                 </g>
               ))}
 
-            {selected && (
-              <circle
-                cx={toPoint(selected.col)}
-                cy={toPoint(selected.row)}
-                r={grid * 0.48}
-                className="selection-ring"
-              />
-            )}
+              {showCoords &&
+                Array.from({ length: size }, (_, i) => (
+                  <g key={`coord-${i}`}>
+                    <text x={toPoint(i)} y={24} className="coord-text">
+                      {makeColumnLabel(i)}
+                    </text>
+                    <text x={22} y={toPoint(i) + 5} className="coord-text">
+                      {size - i}
+                    </text>
+                  </g>
+                ))}
 
-            {selected && board[selected.row][selected.col] === null && (
-              <Stone
-                color={turn}
-                x={toPoint(selected.col)}
-                y={toPoint(selected.row)}
-                size={grid}
-                preview
-                theme={stoneTheme}
-              />
-            )}
+              {selected && (
+                <circle
+                  cx={toPoint(selected.col)}
+                  cy={toPoint(selected.row)}
+                  r={grid * 0.48}
+                  className="selection-ring"
+                />
+              )}
 
-            {board.map((row, r) =>
-              row.map((cell, c) => {
-                if (!cell) return null;
-                const highlight = !!lastMove && lastMove.row === r && lastMove.col === c;
-                return (
-                  <Stone
-                    key={`${r}-${c}`}
-                    color={cell}
-                    x={toPoint(c)}
-                    y={toPoint(r)}
-                    size={grid}
-                    highlight={highlight}
-                    theme={stoneTheme}
-                  />
-                );
-              })
-            )}
-          </svg>
+              {selected && board[selected.row][selected.col] === null && (
+                <Stone
+                  color={turn}
+                  x={toPoint(selected.col)}
+                  y={toPoint(selected.row)}
+                  size={grid}
+                  preview
+                  theme={stoneTheme}
+                />
+              )}
+
+              {board.map((row, r) =>
+                row.map((cell, c) => {
+                  if (!cell) return null;
+                  const highlight = !!lastMove && lastMove.row === r && lastMove.col === c;
+                  return (
+                    <Stone
+                      key={`${r}-${c}`}
+                      color={cell}
+                      x={toPoint(c)}
+                      y={toPoint(r)}
+                      size={grid}
+                      highlight={highlight}
+                      theme={stoneTheme}
+                    />
+                  );
+                })
+              )}
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -183,6 +186,17 @@ const Board: React.FC<BoardProps> = ({
         <p>白提子：{captures.W}</p>
         <p>連續 Pass：{passCount}</p>
         <p className="confirm-hint">{confirmHint}</p>
+        <div className="row-gap">
+          <button type="button" onClick={zoomOut}>
+            縮小
+          </button>
+          <button type="button" onClick={() => setZoom(1)}>
+            重置縮放
+          </button>
+          <button type="button" onClick={zoomIn}>
+            放大
+          </button>
+        </div>
         <button type="button" onClick={onPass} disabled={readOnly || gameOver}>
           Pass
         </button>

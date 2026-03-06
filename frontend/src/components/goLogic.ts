@@ -221,6 +221,29 @@ export function passTurn(state: GameState): GameState {
   return nextState;
 }
 
+export function replayMoves(size: number, moves: MoveRecord[]): GameState {
+  let state = createInitialState(size);
+
+  for (const move of moves) {
+    if (move.pass) {
+      state = passTurn(state);
+      continue;
+    }
+
+    if (typeof move.row !== "number" || typeof move.col !== "number") continue;
+    const result = playMove(state, move.row, move.col);
+    if (result.ok) state = result.state;
+  }
+
+  return state;
+}
+
+export function undoLastMove(state: GameState, steps = 1): GameState {
+  if (steps <= 0 || !state.moves.length) return state;
+  const nextMoves = state.moves.slice(0, Math.max(0, state.moves.length - steps));
+  return replayMoves(state.size, nextMoves);
+}
+
 export function coordsToSgf(row: number, col: number): string {
   return `${String.fromCharCode(97 + col)}${String.fromCharCode(97 + row)}`;
 }
