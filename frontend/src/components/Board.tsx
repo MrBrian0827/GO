@@ -37,7 +37,7 @@ const Board: React.FC<BoardProps> = ({
   const grid = (BOARD_VIEWBOX - padding * 2) / (size - 1);
   const woodGradientId = useId().replace(/:/g, "");
   const woodTextureId = useId().replace(/:/g, "");
-  const boardSurfaceWidth = useMemo(() => Math.max(360, size * 42), [size]);
+  const boardSurfaceWidth = useMemo(() => (size <= 11 ? "100%" : `${Math.max(780, size * 42)}px`), [size]);
 
   const toPoint = (n: number) => padding + n * grid;
 
@@ -47,8 +47,6 @@ const Board: React.FC<BoardProps> = ({
 
   const findIntersection = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-
-    // 以顯示比例換算座標，避免任何螢幕尺寸/縮放造成偏移
     const px = ((event.clientX - rect.left) / rect.width) * BOARD_VIEWBOX;
     const py = ((event.clientY - rect.top) / rect.height) * BOARD_VIEWBOX;
 
@@ -60,7 +58,6 @@ const Board: React.FC<BoardProps> = ({
 
     if (row < 0 || row >= size || col < 0 || col >= size) return null;
 
-    // 觸控時放寬到接近格點就吸附，提高手機命中率
     const threshold = 0.56;
     if (Math.abs(cFloat - col) > threshold || Math.abs(rFloat - row) > threshold) return null;
 
@@ -90,7 +87,6 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    // 已選狀態下點其他格，視為取消，避免誤觸
     if (selected) {
       setSelected(null);
       setConfirmHint("已取消選點，請重新選擇");
@@ -105,7 +101,7 @@ const Board: React.FC<BoardProps> = ({
     <div className="board-layout">
       <div className="board-panel">
         <div className="board-stage">
-          <div className="board-surface" style={{ width: `${boardSurfaceWidth}px` }}>
+          <div className="board-surface" style={{ width: boardSurfaceWidth }}>
             <svg
               className="go-board"
               viewBox={`0 0 ${BOARD_VIEWBOX} ${BOARD_VIEWBOX}`}

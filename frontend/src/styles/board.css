@@ -62,7 +62,7 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .field-row {
@@ -72,7 +72,8 @@ body {
   font-weight: 600;
 }
 
-button {
+button,
+.link-btn {
   border: 1px solid #6a4f1f;
   background: #f8e8be;
   color: #2a1905;
@@ -80,6 +81,10 @@ button {
   border-radius: 10px;
   cursor: pointer;
   min-height: 42px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 textarea,
@@ -101,7 +106,8 @@ select {
   border: 1px solid rgba(130, 90, 22, 0.35);
 }
 
-.row-gap {
+.row-gap,
+.link-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

@@ -29,7 +29,7 @@ const App: React.FC = () => {
   const [localState, setLocalState] = useState<GameState>(createInitialState(9));
   const [aiState, setAiState] = useState<GameState>(createInitialState(9));
   const [stoneTheme, setStoneTheme] = useState<"classic" | "contrast">("classic");
-  const [notice, setNotice] = useState("已啟用雙擊確認落子，降低誤觸。");
+  const [notice, setNotice] = useState("已啟用雙擊確認落子，降低誤觸。\n");
 
   const trySwitchMode = (next: ModeKey) => {
     if (next === mode) return;
@@ -37,7 +37,7 @@ const App: React.FC = () => {
     if ((mode === "local" && hasUnfinishedMoves(localState)) || (mode === "ai" && hasUnfinishedMoves(aiState))) {
       const ok = window.confirm("目前棋局尚未結束，是否切換模式？系統會自動保留進度。");
       if (!ok) return;
-      setNotice("已保留目前棋局進度。");
+      setNotice("已保留目前棋局進度。\n");
     }
 
     setMode(next);
@@ -116,6 +116,18 @@ const App: React.FC = () => {
             <option value="contrast">高對比</option>
           </select>
         </label>
+      </section>
+
+      <section className="link-row" aria-label="external-links">
+        <a href="https://www.youtube.com/results?search_query=潘潘圍棋教學" target="_blank" rel="noreferrer" className="link-btn">
+          推薦圍棋教學 YT（潘潘）
+        </a>
+        <a href="https://goproblems.com/" target="_blank" rel="noreferrer" className="link-btn">
+          開源題庫學習（GoProblems）
+        </a>
+        <a href="https://www.cosumi.net/en/" target="_blank" rel="noreferrer" className="link-btn">
+          功能參考來源（Cosumi）
+        </a>
       </section>
 
       {mode === "local" && (
