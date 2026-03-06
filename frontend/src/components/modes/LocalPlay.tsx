@@ -1,7 +1,9 @@
-﻿import React, { useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import Board from "../Board";
+import SaveLoadModal from "../SaveLoadModal";
 import { createInitialState, passTurn, playMove, undoLastMove } from "../goLogic";
 import type { GameState } from "../goLogic";
+import { loadSlots, saveToSlots } from "../saveSlots";
 
 interface LocalPlayProps {
   size: number;
@@ -12,8 +14,10 @@ interface LocalPlayProps {
 
 const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stoneTheme }) => {
   const [message, setMessage] = useState("雙擊（或連點同一格）確認落子");
+  const [loadOpen, setLoadOpen] = useState(false);
 
-  const saveKey = `go-local-${size}`;
+  const saveKey = `go-local-slots-${size}`;
+  const slots = useMemo(() => loadSlots(saveKey), [saveKey, loadOpen, state.moveNumber]);
 
   const onPlay = (row: number, col: number) => {
     const result = playMove(state, row, col);
@@ -47,28 +51,8 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
   };
 
   const onSave = () => {
-    localStorage.setItem(saveKey, JSON.stringify(state));
-    setMessage("已保存本地棋局");
-  };
-
-  const onLoad = () => {
-    const raw = localStorage.getItem(saveKey);
-    if (!raw) {
-      setMessage("沒有可載入的棋局");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as GameState;
-      if (!parsed || parsed.size !== size || !Array.isArray(parsed.board)) {
-        setMessage("保存檔格式不符目前棋盤大小");
-        return;
-      }
-      onStateChange(parsed);
-      setMessage("已載入本地棋局");
-    } catch {
-      setMessage("載入失敗，保存資料損壞");
-    }
+    saveToSlots(saveKey, `本地對局 ${size}x${size}`, state);
+    setMessage("已保存存檔（最多 3 筆）");
   };
 
   return (
@@ -82,11 +66,25 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
         <button type="button" onClick={onSave}>
           保存
         </button>
-        <button type="button" onClick={onLoad}>
+        <button type="button" onClick={() => setLoadOpen(true)}>
           載入
         </button>
       </div>
       <Board state={state} onPlay={onPlay} onPass={onPass} onReset={onReset} stoneTheme={stoneTheme} />
+
+      <SaveLoadModal
+        open={loadOpen}
+        slots={slots}
+        onClose={() => setLoadOpen(false)}
+        onSelect={(slot) => {
+          onStateChange({
+            ...createInitialState(slot.state.size),
+            ...slot.state
+          });
+          setLoadOpen(false);
+          setMessage("已載入存檔");
+        }}
+      />
     </section>
   );
 };

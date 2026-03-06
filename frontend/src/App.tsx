@@ -1,21 +1,19 @@
 ﻿import React, { useState } from "react";
 import Tutorial from "./components/Tutorial";
-import Puzzle from "./components/Puzzle";
 import LocalPlay from "./components/modes/LocalPlay";
 import AIPlay from "./components/modes/AIPlay";
 import { createInitialState } from "./components/goLogic";
 import type { GameState } from "./components/goLogic";
 import "./styles/board.css";
 
-type ModeKey = "local" | "ai" | "tutorial" | "puzzle";
+type ModeKey = "local" | "ai" | "tutorial";
 
 const BOARD_SIZES = [5, 6, 7, 8, 9, 11, 13, 15, 17, 19];
 
 const modeList: Array<{ key: ModeKey; label: string; badge: string }> = [
   { key: "local", label: "本地雙人", badge: "LOCAL" },
   { key: "ai", label: "對 AI", badge: "AI" },
-  { key: "tutorial", label: "教學", badge: "LEARN" },
-  { key: "puzzle", label: "題庫", badge: "PUZZLE" }
+  { key: "tutorial", label: "教學", badge: "LEARN" }
 ];
 
 function hasUnfinishedMoves(state: GameState): boolean {
@@ -29,7 +27,7 @@ const App: React.FC = () => {
   const [localState, setLocalState] = useState<GameState>(createInitialState(9));
   const [aiState, setAiState] = useState<GameState>(createInitialState(9));
   const [stoneTheme, setStoneTheme] = useState<"classic" | "contrast">("classic");
-  const [notice, setNotice] = useState("已啟用雙擊確認落子，降低誤觸。\n");
+  const [notice, setNotice] = useState("已啟用雙擊確認落子，降低誤觸。");
 
   const trySwitchMode = (next: ModeKey) => {
     if (next === mode) return;
@@ -37,7 +35,7 @@ const App: React.FC = () => {
     if ((mode === "local" && hasUnfinishedMoves(localState)) || (mode === "ai" && hasUnfinishedMoves(aiState))) {
       const ok = window.confirm("目前棋局尚未結束，是否切換模式？系統會自動保留進度。");
       if (!ok) return;
-      setNotice("已保留目前棋局進度。\n");
+      setNotice("已保留目前棋局進度。");
     }
 
     setMode(next);
@@ -47,7 +45,7 @@ const App: React.FC = () => {
     if (mode === "local") {
       if (hasUnfinishedMoves(localState)) {
         const save = window.confirm("切換棋盤大小會重設目前本地棋局。是否先保存進度？");
-        if (save) localStorage.setItem(`go-local-${localSize}`, JSON.stringify(localState));
+        if (save) localStorage.setItem(`go-local-slots-${localSize}`, JSON.stringify(localState));
       }
       setLocalSize(next);
       setLocalState(createInitialState(next));
@@ -58,7 +56,7 @@ const App: React.FC = () => {
     if (mode === "ai") {
       if (hasUnfinishedMoves(aiState)) {
         const save = window.confirm("切換棋盤大小會重設目前 AI 棋局。是否先保存進度？");
-        if (save) localStorage.setItem(`go-ai-${aiSize}-medium`, JSON.stringify({ state: aiState, difficulty: "medium" }));
+        if (save) localStorage.setItem(`go-ai-slots-${aiSize}-medium`, JSON.stringify(aiState));
       }
       setAiSize(next);
       setAiState(createInitialState(next));
@@ -116,18 +114,21 @@ const App: React.FC = () => {
             <option value="contrast">高對比</option>
           </select>
         </label>
-      </section>
 
-      <section className="link-row" aria-label="external-links">
-        <a href="https://www.youtube.com/results?search_query=潘潘圍棋教學" target="_blank" rel="noreferrer" className="link-btn">
-          推薦圍棋教學 YT（潘潘）
-        </a>
-        <a href="https://goproblems.com/" target="_blank" rel="noreferrer" className="link-btn">
-          開源題庫學習（GoProblems）
-        </a>
-        <a href="https://www.cosumi.net/en/" target="_blank" rel="noreferrer" className="link-btn">
-          功能參考來源（Cosumi）
-        </a>
+        <details className="resource-menu">
+          <summary>學習資源</summary>
+          <div className="resource-list">
+            <a href="https://www.youtube.com/results?search_query=潘潘圍棋教學" target="_blank" rel="noreferrer">
+              推薦圍棋教學 YT
+            </a>
+            <a href="https://goproblems.com/" target="_blank" rel="noreferrer">
+              開源題庫學習
+            </a>
+            <a href="https://www.cosumi.net/en/" target="_blank" rel="noreferrer">
+              功能參考來源
+            </a>
+          </div>
+        </details>
       </section>
 
       {mode === "local" && (
@@ -135,7 +136,6 @@ const App: React.FC = () => {
       )}
       {mode === "ai" && <AIPlay size={aiSize} state={aiState} onStateChange={setAiState} stoneTheme={stoneTheme} />}
       {mode === "tutorial" && <Tutorial />}
-      {mode === "puzzle" && <Puzzle />}
     </main>
   );
 };

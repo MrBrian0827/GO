@@ -1,9 +1,11 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import Board from "../Board";
+import SaveLoadModal from "../SaveLoadModal";
 import { chooseAIMove } from "../AIPlayer";
 import type { AIDifficulty } from "../AIPlayer";
 import { createInitialState, passTurn, playMove, replayMoves, undoLastMove } from "../goLogic";
 import type { GameState } from "../goLogic";
+import { loadSlots, saveToSlots } from "../saveSlots";
 
 interface AIPlayProps {
   size: number;
@@ -16,9 +18,11 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   const [difficulty, setDifficulty] = useState<AIDifficulty>("medium");
   const [message, setMessage] = useState("你執黑，AI 執白");
   const [aiThinking, setAiThinking] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
   const aiTimer = useRef<number | null>(null);
 
-  const saveKey = `go-ai-${size}-${difficulty}`;
+  const saveKey = `go-ai-slots-${size}-${difficulty}`;
+  const slots = useMemo(() => loadSlots(saveKey), [saveKey, loadOpen, state.moveNumber]);
 
   useEffect(() => {
     if (state.gameOver || state.turn !== "W") return;
@@ -28,7 +32,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
       const aiMove = chooseAIMove(state, "W", difficulty);
       if (!aiMove) {
         onStateChange(passTurn(state));
-        setMessage("AI Pass");
+        setMessage("AI 選擇 Pass");
         setAiThinking(false);
         return;
       }
@@ -91,30 +95,8 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   };
 
   const onSave = () => {
-    localStorage.setItem(saveKey, JSON.stringify({ state, difficulty }));
-    setMessage("已保存 AI 棋局");
-  };
-
-  const onLoad = () => {
-    const raw = localStorage.getItem(saveKey);
-    if (!raw) {
-      setMessage("沒有可載入的 AI 棋局");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as { state: GameState; difficulty: AIDifficulty };
-      if (!parsed?.state || parsed.state.size !== size) {
-        setMessage("保存檔與目前棋盤大小不符");
-        return;
-      }
-
-      setDifficulty(parsed.difficulty ?? "medium");
-      onStateChange(parsed.state);
-      setMessage("已載入 AI 棋局");
-    } catch {
-      setMessage("載入失敗，保存資料損壞");
-    }
+    saveToSlots(saveKey, `AI對局 ${difficulty} ${size}x${size}`, state);
+    setMessage("已保存存檔（最多 3 筆）");
   };
 
   return (
@@ -142,12 +124,26 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
         <button type="button" onClick={onSave}>
           保存
         </button>
-        <button type="button" onClick={onLoad}>
+        <button type="button" onClick={() => setLoadOpen(true)}>
           載入
         </button>
       </div>
 
       <Board state={state} onPlay={onPlay} onPass={onPass} onReset={onReset} stoneTheme={stoneTheme} />
+
+      <SaveLoadModal
+        open={loadOpen}
+        slots={slots}
+        onClose={() => setLoadOpen(false)}
+        onSelect={(slot) => {
+          onStateChange({
+            ...createInitialState(slot.state.size),
+            ...slot.state
+          });
+          setLoadOpen(false);
+          setMessage("已載入 AI 存檔");
+        }}
+      />
     </section>
   );
 };
