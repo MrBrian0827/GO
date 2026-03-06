@@ -1,7 +1,12 @@
 ﻿import axios from "axios";
 
+export const API_BASE = "https://你的後端 Render URL";
+const resolvedBase = API_BASE.includes("你的後端")
+  ? import.meta.env.VITE_API_URL ?? "http://localhost:3001"
+  : API_BASE;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:3001/api"
+  baseURL: `${resolvedBase}/api`
 });
 
 export interface AuthResult {

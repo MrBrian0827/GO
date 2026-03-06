@@ -33,8 +33,8 @@ function replayStateFromMoves(size: number, moves: GameState["moves"], steps: nu
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<Mode>("本地雙人");
-  const [size, setSize] = useState(9);
-  const [state, setState] = useState<GameState>(createInitialState(9));
+  const [size, setSize] = useState(5);
+  const [state, setState] = useState<GameState>(createInitialState(5));
   const [message, setMessage] = useState("準備開始");
   const [sgf, setSgf] = useState("");
   const [replayIndex, setReplayIndex] = useState(0);
@@ -172,7 +172,7 @@ const App: React.FC = () => {
 
         <label htmlFor="size">棋盤尺寸</label>
         <select id="size" value={size} onChange={(e) => setSize(Number(e.target.value))}>
-          {[5, 7, 9, 13, 19].map((s) => (
+          {[5, 6, 7, 8].map((s) => (
             <option key={s} value={s}>
               {s} x {s}
             </option>
