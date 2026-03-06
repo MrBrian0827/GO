@@ -1,4 +1,4 @@
-﻿.stone {
+.stone {
   transform-origin: center;
   animation: pop 0.16s ease-out;
 }
