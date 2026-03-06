@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useEffect, useId, useState } from "react";
 import Stone from "./Stone";
 import type { GameState } from "./goLogic";
 import "../styles/board.css";
@@ -9,6 +9,7 @@ interface BoardProps {
   onPass: () => void;
   showCoords?: boolean;
   readOnly?: boolean;
+  stoneTheme?: "classic" | "contrast";
 }
 
 const BOARD_PIXEL = 680;
@@ -23,72 +24,155 @@ const Board: React.FC<BoardProps> = ({
   onPlay,
   onPass,
   showCoords = true,
-  readOnly = false
+  readOnly = false,
+  stoneTheme = "classic"
 }) => {
   const { size, board, lastMove, turn, captures, moveNumber, passCount, gameOver, winner } = state;
+  const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
+  const [confirmHint, setConfirmHint] = useState("點一下選擇位置，再點一次確認落子");
+
   const padding = 48;
   const grid = (BOARD_PIXEL - padding * 2) / (size - 1);
+  const woodGradientId = useId().replace(/:/g, "");
+  const woodTextureId = useId().replace(/:/g, "");
 
   const toPoint = (n: number) => padding + n * grid;
 
-  const handleBoardClick = (e: React.MouseEvent<SVGSVGElement>) => {
+  useEffect(() => {
+    setSelected(null);
+  }, [turn, size, moveNumber]);
+
+  const findIntersection = (event: React.PointerEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    // 使用相對座標換算，避免不同螢幕縮放造成偏移
+    const px = ((event.clientX - rect.left) / rect.width) * BOARD_PIXEL;
+    const py = ((event.clientY - rect.top) / rect.height) * BOARD_PIXEL;
+
+    const cFloat = (px - padding) / grid;
+    const rFloat = (py - padding) / grid;
+
+    const col = Math.round(cFloat);
+    const row = Math.round(rFloat);
+
+    if (row < 0 || row >= size || col < 0 || col >= size) return null;
+
+    // 觸控誤差修正：容許落在格點周邊範圍即吸附到中心
+    const threshold = 0.52;
+    if (Math.abs(cFloat - col) > threshold || Math.abs(rFloat - row) > threshold) return null;
+
+    return { row, col };
+  };
+
+  const handleBoardPointer = (event: React.PointerEvent<SVGSVGElement>) => {
     if (readOnly || gameOver) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
 
-    const col = Math.round((x - padding) / grid);
-    const row = Math.round((y - padding) / grid);
-
-    if (row >= 0 && row < size && col >= 0 && col < size) {
-      onPlay(row, col);
+    const point = findIntersection(event);
+    if (!point) {
+      setSelected(null);
+      setConfirmHint("已取消選擇");
+      return;
     }
+
+    if (board[point.row][point.col] !== null) {
+      setSelected(null);
+      setConfirmHint("此點已有棋子，請選擇其他位置");
+      return;
+    }
+
+    if (selected && selected.row === point.row && selected.col === point.col) {
+      onPlay(point.row, point.col);
+      setSelected(null);
+      setConfirmHint("已送出落子");
+      return;
+    }
+
+    setSelected(point);
+    setConfirmHint(`已選擇 (${point.row}, ${point.col})，再次點擊確認`);
   };
 
   return (
     <div className="board-layout">
       <div className="board-panel">
-        <svg className="go-board" viewBox={`0 0 ${BOARD_PIXEL} ${BOARD_PIXEL}`} onClick={handleBoardClick}>
-          <defs>
-            <linearGradient id="woodGradient" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#e8c785" />
-              <stop offset="55%" stopColor="#d8aa61" />
-              <stop offset="100%" stopColor="#be8a45" />
-            </linearGradient>
-            <pattern id="woodTexture" width="12" height="12" patternUnits="userSpaceOnUse">
-              <path d="M0 6 H12" stroke="rgba(110,63,12,0.12)" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" className="wood-bg" />
-          <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill="url(#woodTexture)" />
+        <div className="board-stage">
+          <svg
+            className="go-board"
+            viewBox={`0 0 ${BOARD_PIXEL} ${BOARD_PIXEL}`}
+            onPointerDown={handleBoardPointer}
+            role="button"
+            aria-label="go-board"
+          >
+            <defs>
+              <linearGradient id={woodGradientId} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#e8c785" />
+                <stop offset="55%" stopColor="#d8aa61" />
+                <stop offset="100%" stopColor="#be8a45" />
+              </linearGradient>
+              <pattern id={woodTextureId} width="12" height="12" patternUnits="userSpaceOnUse">
+                <path d="M0 6 H12" stroke="rgba(110,63,12,0.12)" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodGradientId})`} />
+            <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodTextureId})`} />
 
-          {Array.from({ length: size }, (_, i) => (
-            <g key={`line-${i}`}>
-              <line x1={toPoint(0)} y1={toPoint(i)} x2={toPoint(size - 1)} y2={toPoint(i)} className="grid-line" />
-              <line x1={toPoint(i)} y1={toPoint(0)} x2={toPoint(i)} y2={toPoint(size - 1)} className="grid-line" />
-            </g>
-          ))}
-
-          {showCoords &&
-            Array.from({ length: size }, (_, i) => (
-              <g key={`coord-${i}`}>
-                <text x={toPoint(i)} y={24} className="coord-text">
-                  {makeColumnLabel(i)}
-                </text>
-                <text x={22} y={toPoint(i) + 5} className="coord-text">
-                  {size - i}
-                </text>
+            {Array.from({ length: size }, (_, i) => (
+              <g key={`line-${i}`}>
+                <line x1={toPoint(0)} y1={toPoint(i)} x2={toPoint(size - 1)} y2={toPoint(i)} className="grid-line" />
+                <line x1={toPoint(i)} y1={toPoint(0)} x2={toPoint(i)} y2={toPoint(size - 1)} className="grid-line" />
               </g>
             ))}
 
-          {board.map((row, r) =>
-            row.map((cell, c) => {
-              if (!cell) return null;
-              const highlight = !!lastMove && lastMove.row === r && lastMove.col === c;
-              return <Stone key={`${r}-${c}`} color={cell} x={toPoint(c)} y={toPoint(r)} size={grid} highlight={highlight} />;
-            })
-          )}
-        </svg>
+            {showCoords &&
+              Array.from({ length: size }, (_, i) => (
+                <g key={`coord-${i}`}>
+                  <text x={toPoint(i)} y={24} className="coord-text">
+                    {makeColumnLabel(i)}
+                  </text>
+                  <text x={22} y={toPoint(i) + 5} className="coord-text">
+                    {size - i}
+                  </text>
+                </g>
+              ))}
+
+            {selected && (
+              <circle
+                cx={toPoint(selected.col)}
+                cy={toPoint(selected.row)}
+                r={grid * 0.48}
+                className="selection-ring"
+              />
+            )}
+
+            {selected && board[selected.row][selected.col] === null && (
+              <Stone
+                color={turn}
+                x={toPoint(selected.col)}
+                y={toPoint(selected.row)}
+                size={grid}
+                preview
+                theme={stoneTheme}
+              />
+            )}
+
+            {board.map((row, r) =>
+              row.map((cell, c) => {
+                if (!cell) return null;
+                const highlight = !!lastMove && lastMove.row === r && lastMove.col === c;
+                return (
+                  <Stone
+                    key={`${r}-${c}`}
+                    color={cell}
+                    x={toPoint(c)}
+                    y={toPoint(r)}
+                    size={grid}
+                    highlight={highlight}
+                    theme={stoneTheme}
+                  />
+                );
+              })
+            )}
+          </svg>
+        </div>
       </div>
 
       <div className="board-info">
@@ -98,6 +182,7 @@ const Board: React.FC<BoardProps> = ({
         <p>黑提子：{captures.B}</p>
         <p>白提子：{captures.W}</p>
         <p>連續 Pass：{passCount}</p>
+        <p className="confirm-hint">{confirmHint}</p>
         <button type="button" onClick={onPass} disabled={readOnly || gameOver}>
           Pass
         </button>
