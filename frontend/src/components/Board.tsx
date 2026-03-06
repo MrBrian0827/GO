@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useId, useState } from "react";
+﻿import React, { useEffect, useId, useMemo, useState } from "react";
 import Stone from "./Stone";
 import type { GameState } from "./goLogic";
 import "../styles/board.css";
@@ -7,12 +7,13 @@ interface BoardProps {
   state: GameState;
   onPlay: (row: number, col: number) => void;
   onPass: () => void;
+  onReset?: () => void;
   showCoords?: boolean;
   readOnly?: boolean;
   stoneTheme?: "classic" | "contrast";
 }
 
-const BOARD_PIXEL = 680;
+const BOARD_VIEWBOX = 680;
 
 function makeColumnLabel(index: number): string {
   const letters = "ABCDEFGHJKLMNOPQRST";
@@ -23,19 +24,20 @@ const Board: React.FC<BoardProps> = ({
   state,
   onPlay,
   onPass,
+  onReset,
   showCoords = true,
   readOnly = false,
   stoneTheme = "classic"
 }) => {
   const { size, board, lastMove, turn, captures, moveNumber, passCount, gameOver, winner } = state;
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
-  const [confirmHint, setConfirmHint] = useState("點一下選擇位置，再點一次確認落子");
-  const [zoom, setZoom] = useState(1);
+  const [confirmHint, setConfirmHint] = useState("點一下選點，再點同一格確認落子");
 
   const padding = 48;
-  const grid = (BOARD_PIXEL - padding * 2) / (size - 1);
+  const grid = (BOARD_VIEWBOX - padding * 2) / (size - 1);
   const woodGradientId = useId().replace(/:/g, "");
   const woodTextureId = useId().replace(/:/g, "");
+  const boardSurfaceWidth = useMemo(() => Math.max(360, size * 42), [size]);
 
   const toPoint = (n: number) => padding + n * grid;
 
@@ -45,8 +47,10 @@ const Board: React.FC<BoardProps> = ({
 
   const findIntersection = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const px = ((event.clientX - rect.left) / rect.width) * BOARD_PIXEL;
-    const py = ((event.clientY - rect.top) / rect.height) * BOARD_PIXEL;
+
+    // 以顯示比例換算座標，避免任何螢幕尺寸/縮放造成偏移
+    const px = ((event.clientX - rect.left) / rect.width) * BOARD_VIEWBOX;
+    const py = ((event.clientY - rect.top) / rect.height) * BOARD_VIEWBOX;
 
     const cFloat = (px - padding) / grid;
     const rFloat = (py - padding) / grid;
@@ -56,7 +60,8 @@ const Board: React.FC<BoardProps> = ({
 
     if (row < 0 || row >= size || col < 0 || col >= size) return null;
 
-    const threshold = 0.52;
+    // 觸控時放寬到接近格點就吸附，提高手機命中率
+    const threshold = 0.56;
     if (Math.abs(cFloat - col) > threshold || Math.abs(rFloat - row) > threshold) return null;
 
     return { row, col };
@@ -68,13 +73,13 @@ const Board: React.FC<BoardProps> = ({
     const point = findIntersection(event);
     if (!point) {
       setSelected(null);
-      setConfirmHint("已取消選擇");
+      setConfirmHint("已取消選點");
       return;
     }
 
     if (board[point.row][point.col] !== null) {
       setSelected(null);
-      setConfirmHint("此點已有棋子，請選擇其他位置");
+      setConfirmHint("此點已有棋子，請改選其他位置");
       return;
     }
 
@@ -85,21 +90,25 @@ const Board: React.FC<BoardProps> = ({
       return;
     }
 
-    setSelected(point);
-    setConfirmHint(`已選擇 (${point.row}, ${point.col})，再次點擊確認`);
-  };
+    // 已選狀態下點其他格，視為取消，避免誤觸
+    if (selected) {
+      setSelected(null);
+      setConfirmHint("已取消選點，請重新選擇");
+      return;
+    }
 
-  const zoomIn = () => setZoom((z) => Math.min(2.2, Number((z + 0.2).toFixed(1))));
-  const zoomOut = () => setZoom((z) => Math.max(1, Number((z - 0.2).toFixed(1))));
+    setSelected(point);
+    setConfirmHint(`已選擇 (${point.row}, ${point.col})，再次點同格確認`);
+  };
 
   return (
     <div className="board-layout">
       <div className="board-panel">
         <div className="board-stage">
-          <div className="board-surface" style={{ width: `${zoom * 100}%` }}>
+          <div className="board-surface" style={{ width: `${boardSurfaceWidth}px` }}>
             <svg
               className="go-board"
-              viewBox={`0 0 ${BOARD_PIXEL} ${BOARD_PIXEL}`}
+              viewBox={`0 0 ${BOARD_VIEWBOX} ${BOARD_VIEWBOX}`}
               onPointerDown={handleBoardPointer}
               role="button"
               aria-label="go-board"
@@ -114,8 +123,8 @@ const Board: React.FC<BoardProps> = ({
                   <path d="M0 6 H12" stroke="rgba(110,63,12,0.12)" strokeWidth="1" />
                 </pattern>
               </defs>
-              <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodGradientId})`} />
-              <rect x="0" y="0" width={BOARD_PIXEL} height={BOARD_PIXEL} rx="16" ry="16" fill={`url(#${woodTextureId})`} />
+              <rect x="0" y="0" width={BOARD_VIEWBOX} height={BOARD_VIEWBOX} rx="16" ry="16" fill={`url(#${woodGradientId})`} />
+              <rect x="0" y="0" width={BOARD_VIEWBOX} height={BOARD_VIEWBOX} rx="16" ry="16" fill={`url(#${woodTextureId})`} />
 
               {Array.from({ length: size }, (_, i) => (
                 <g key={`line-${i}`}>
@@ -178,30 +187,25 @@ const Board: React.FC<BoardProps> = ({
         </div>
       </div>
 
-      <div className="board-info">
+      <aside className="board-info">
         <h3>對局資訊</h3>
-        <p>回合：{moveNumber}</p>
-        <p>目前執子：{turn === "B" ? "黑" : "白"}</p>
-        <p>黑提子：{captures.B}</p>
-        <p>白提子：{captures.W}</p>
+        <p>手數：{moveNumber}</p>
+        <p>回合：{turn === "B" ? "黑" : "白"}</p>
+        <p>提子：黑 {captures.B} / 白 {captures.W}</p>
         <p>連續 Pass：{passCount}</p>
         <p className="confirm-hint">{confirmHint}</p>
         <div className="row-gap">
-          <button type="button" onClick={zoomOut}>
-            縮小
+          <button type="button" onClick={onPass} disabled={readOnly || gameOver}>
+            Pass
           </button>
-          <button type="button" onClick={() => setZoom(1)}>
-            重置縮放
-          </button>
-          <button type="button" onClick={zoomIn}>
-            放大
-          </button>
+          {!!onReset && (
+            <button type="button" onClick={onReset} disabled={readOnly}>
+              重新開始棋局
+            </button>
+          )}
         </div>
-        <button type="button" onClick={onPass} disabled={readOnly || gameOver}>
-          Pass
-        </button>
         {gameOver && <p className="winner">終局：{winner === "D" ? "和局" : winner === "B" ? "黑勝" : "白勝"}</p>}
-      </div>
+      </aside>
     </div>
   );
 };

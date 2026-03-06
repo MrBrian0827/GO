@@ -40,7 +40,7 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
   };
 
   const onReset = () => {
-    const ok = window.confirm("確認重設本地棋局？");
+    const ok = window.confirm("確認重新開始本地棋局？");
     if (!ok) return;
     onStateChange(createInitialState(size));
     setMessage("棋局已重設");
@@ -79,9 +79,6 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
         <button type="button" onClick={onUndo}>
           Undo
         </button>
-        <button type="button" onClick={onReset}>
-          Reset
-        </button>
         <button type="button" onClick={onSave}>
           保存
         </button>
@@ -89,7 +86,7 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
           載入
         </button>
       </div>
-      <Board state={state} onPlay={onPlay} onPass={onPass} stoneTheme={stoneTheme} />
+      <Board state={state} onPlay={onPlay} onPass={onPass} onReset={onReset} stoneTheme={stoneTheme} />
     </section>
   );
 };

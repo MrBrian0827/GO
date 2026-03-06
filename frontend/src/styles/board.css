@@ -110,29 +110,28 @@ select {
 
 .board-layout {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  align-items: flex-start;
   flex-wrap: wrap;
 }
 
 .board-panel {
-  flex: 1 1 320px;
-  min-width: 280px;
+  flex: 1 1 560px;
+  min-width: 260px;
 }
 
 .board-stage {
   width: 100%;
-  max-width: min(92vw, 760px);
+  max-width: min(94vw, 860px);
   margin: 0 auto;
-  aspect-ratio: 1 / 1;
   overflow: auto;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid rgba(96, 60, 12, 0.32);
   background: rgba(255, 245, 220, 0.5);
 }
 
 .board-surface {
-  min-width: min(92vw, 760px);
-  height: 100%;
+  aspect-ratio: 1 / 1;
 }
 
 .go-board {
@@ -151,7 +150,7 @@ select {
 
 .coord-text {
   fill: #4a2d05;
-  font-size: clamp(10px, 2.2vw, 14px);
+  font-size: clamp(10px, 2vw, 14px);
   text-anchor: middle;
   font-weight: 600;
 }
@@ -163,12 +162,15 @@ select {
 }
 
 .board-info {
-  min-width: 220px;
-  flex: 1 1 240px;
-  padding: 14px;
+  flex: 0 0 clamp(180px, 22vw, 220px);
+  padding: 10px;
   border-radius: 12px;
-  background: rgba(255, 247, 228, 0.82);
+  background: rgba(255, 247, 228, 0.86);
   border: 1px solid rgba(111, 73, 11, 0.4);
+}
+
+.board-info p {
+  margin: 6px 0;
 }
 
 .confirm-hint {
@@ -192,11 +194,8 @@ select {
     padding: 12px;
   }
 
-  .board-layout {
-    gap: 10px;
-  }
-
   .board-info {
     width: 100%;
+    flex: 1 1 100%;
   }
 }

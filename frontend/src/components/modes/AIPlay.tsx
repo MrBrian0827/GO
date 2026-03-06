@@ -84,7 +84,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   };
 
   const onReset = () => {
-    const ok = window.confirm("確認重設 AI 對局？");
+    const ok = window.confirm("確認重新開始 AI 對局？");
     if (!ok) return;
     onStateChange(createInitialState(size));
     setMessage("AI 棋局已重設");
@@ -139,9 +139,6 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
         <button type="button" onClick={onUndo}>
           Undo
         </button>
-        <button type="button" onClick={onReset}>
-          Reset
-        </button>
         <button type="button" onClick={onSave}>
           保存
         </button>
@@ -150,7 +147,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
         </button>
       </div>
 
-      <Board state={state} onPlay={onPlay} onPass={onPass} stoneTheme={stoneTheme} />
+      <Board state={state} onPlay={onPlay} onPass={onPass} onReset={onReset} stoneTheme={stoneTheme} />
     </section>
   );
 };
