@@ -1,9 +1,10 @@
-﻿import React, { useState } from "react";
+﻿import React, { useRef, useState } from "react";
 import LocalPlay from "./components/modes/LocalPlay";
 import AIPlay from "./components/modes/AIPlay";
 import Tutorial from "./components/Tutorial";
+import Board from "./components/Board";
 import { createInitialState } from "./components/goLogic";
-import type { GameState } from "./components/goLogic";
+import type { GameState, StoneColor } from "./components/goLogic";
 import "./styles/board.css";
 
 type TabKey = "rules" | "local" | "ai" | "tutorial" | "pvp";
@@ -39,8 +40,8 @@ const App: React.FC = () => {
       </header>
 
       <div className="tab-bar">
-        {["rules", "local", "ai", "tutorial", "pvp"].map((t) => (
-          <button key={t} type="button" className={tab === t ? "active" : ""} onClick={() => setTab(t as TabKey)}>
+        {(["rules", "local", "ai", "tutorial", "pvp"] as TabKey[]).map((t) => (
+          <button key={t} type="button" className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
             {t === "rules" && "規則"}
             {t === "local" && "本機對戰"}
             {t === "ai" && "AI 對戰"}
@@ -143,25 +144,102 @@ const PvpGate: React.FC = () => {
 };
 
 const PvpRoom: React.FC = () => {
+  const roomId = "test-room";
   const [status, setStatus] = useState("未連線");
+  const [role, setRole] = useState<StoneColor | "S" | null>(null);
+  const [state, setState] = useState<GameState>(createInitialState(19));
+  const wsRef = useRef<WebSocket | null>(null);
 
   const connect = () => {
-    const ws = new WebSocket("ws://localhost:3001");
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}`);
+    wsRef.current = ws;
+
     ws.onopen = () => {
       setStatus("已連線");
-      ws.send(JSON.stringify({ type: "join_room", roomId: "test-room" }));
+      ws.send(JSON.stringify({ type: "join_room", roomId, size: state.size }));
     };
-    ws.onclose = () => setStatus("已斷線");
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "room_state" && msg.state) {
+          setState(msg.state);
+        }
+        if (msg.type === "info" && msg.message) {
+          setStatus(msg.message);
+          if (typeof msg.message === "string") {
+            if (msg.message.includes("執 B")) setRole("B");
+            else if (msg.message.includes("執 W")) setRole("W");
+            else if (msg.message.includes("觀戰") || msg.message.includes("已滿")) setRole("S");
+          }
+        }
+      } catch {
+        setStatus("訊息解析失敗");
+      }
+    };
+
+    ws.onclose = () => {
+      setStatus("已斷線");
+      setRole(null);
+    };
+  };
+
+  const onPlay = (row: number, col: number) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setStatus("尚未連線");
+      return;
+    }
+    if (role !== "B" && role !== "W") {
+      setStatus("目前為觀戰模式");
+      return;
+    }
+    if (state.turn !== role) {
+      setStatus("尚未輪到你");
+      return;
+    }
+    ws.send(JSON.stringify({ type: "move", roomId, row, col }));
+  };
+
+  const onPass = () => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setStatus("尚未連線");
+      return;
+    }
+    if (role !== "B" && role !== "W") {
+      setStatus("目前為觀戰模式");
+      return;
+    }
+    if (state.turn !== role) {
+      setStatus("尚未輪到你");
+      return;
+    }
+    ws.send(JSON.stringify({ type: "pass", roomId }));
   };
 
   return (
     <div className="row-gap">
-      <button type="button" onClick={connect}>
-        加入測試房
-      </button>
-      <span>{status}</span>
+      <div className="row-gap">
+        <button type="button" onClick={connect}>
+          加入測試房
+        </button>
+        <span>狀態：{status}</span>
+        <span>角色：{role ? (role === "B" ? "黑" : role === "W" ? "白" : "觀戰") : "未指派"}</span>
+      </div>
+
+      <Board
+        state={state}
+        onPlay={onPlay}
+        onPass={onPass}
+        readOnly={role !== "B" && role !== "W"}
+        stoneTheme="classic"
+      />
     </div>
   );
 };
 
 export default App;
+

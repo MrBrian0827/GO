@@ -7,6 +7,7 @@ const gameRoute = require("../routes/game");
 const tutorialRoute = require("../routes/tutorial");
 const puzzleRoute = require("../routes/puzzle");
 const authRoute = require("../routes/auth");
+const aiRoute = require("../routes/ai");
 const { initWsServer } = require("../websocket/wsServer");
 
 const app = express();
@@ -23,6 +24,7 @@ app.use("/api/game", gameRoute);
 app.use("/api/tutorial", tutorialRoute);
 app.use("/api/puzzle", puzzleRoute);
 app.use("/api/auth", authRoute);
+app.use("/api/ai", aiRoute);
 
 const frontendDist = path.join(__dirname, "..", "..", "..", "frontend", "dist");
 app.use(express.static(frontendDist));

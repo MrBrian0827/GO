@@ -29,7 +29,7 @@ const Board: React.FC<BoardProps> = ({
   readOnly = false,
   stoneTheme = "classic"
 }) => {
-  const { size, board, lastMove, turn, captures, moveNumber, passCount, gameOver, winner } = state;
+  const { size, board, lastMove, turn, captures, moveNumber, gameOver, winner, moves } = state;
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
   const [confirmHint, setConfirmHint] = useState("點一下選點，再點同一格確認落子");
 
@@ -96,6 +96,9 @@ const Board: React.FC<BoardProps> = ({
     setSelected(point);
     setConfirmHint(`已選擇 (${point.row}, ${point.col})，再次點同格確認`);
   };
+
+  const lastPass = [...moves].reverse().find((m) => m.pass);
+  const lastPassText = lastPass ? (lastPass.color === "B" ? "黑" : "白") : "無";
 
   return (
     <div className="board-layout">
@@ -188,7 +191,7 @@ const Board: React.FC<BoardProps> = ({
         <p>手數：{moveNumber}</p>
         <p>回合：{turn === "B" ? "黑" : "白"}</p>
         <p>提子：黑 {captures.B} / 白 {captures.W}</p>
-        <p>連續 Pass：{passCount}</p>
+        <p>最近 Pass：{lastPassText}</p>
         <p className="confirm-hint">{confirmHint}</p>
         <div className="row-gap">
           <button type="button" onClick={onPass} disabled={readOnly || gameOver}>
@@ -207,3 +210,7 @@ const Board: React.FC<BoardProps> = ({
 };
 
 export default Board;
+
+
+
+

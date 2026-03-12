@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import Board from "../Board";
 import SaveLoadModal from "../SaveLoadModal";
-import { chooseAIMove } from "../AIPlayer";
 import { createInitialState, passTurn, playMove } from "../goLogic";
 import type { GameState } from "../goLogic";
 import { loadSlots, saveToSlots } from "../saveSlots";
@@ -14,36 +13,64 @@ interface AIPlayProps {
 }
 
 const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme }) => {
-  const [message, setMessage] = useState("你執黑，AI 執白（最困難模式）");
+  const [message, setMessage] = useState("你執黑，AI 執白");
   const [aiThinking, setAiThinking] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
   const aiTimer = useRef<number | null>(null);
 
-  const saveKey = `go-ai-slots-${size}-hard`;
+  const saveKey = `go-ai-slots-${size}`;
   const slots = useMemo(() => loadSlots(saveKey), [saveKey, loadOpen, state.moveNumber]);
 
   useEffect(() => {
     if (state.gameOver || state.turn !== "W") return;
 
+    let cancelled = false;
     setAiThinking(true);
-    aiTimer.current = window.setTimeout(() => {
-      const aiMove = chooseAIMove(state, "W", "hard");
-      if (!aiMove) {
-        onStateChange(passTurn(state));
-        setMessage("AI 選擇 Pass");
-        setAiThinking(false);
-        return;
-      }
+    setMessage("AI 思考中...");
 
-      const result = playMove(state, aiMove.row, aiMove.col);
-      if (result.ok) {
-        onStateChange(result.state);
-        setMessage("AI 已回應");
+    const run = async () => {
+      try {
+        const res = await fetch("/api/ai/move", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ size: state.size, moves: state.moves, toPlay: "W" })
+        });
+
+        if (!res.ok) throw new Error("AI 引擎回應失敗");
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data.move?.pass) {
+          onStateChange(passTurn(state));
+          setMessage("AI 選擇 Pass");
+          return;
+        }
+
+        if (typeof data.move?.row === "number" && typeof data.move?.col === "number") {
+          const result = playMove(state, data.move.row, data.move.col);
+          if (result.ok) {
+            onStateChange(result.state);
+            setMessage("AI 已回應");
+          } else {
+            setMessage(result.message ?? "AI 落子失敗");
+          }
+          return;
+        }
+
+        setMessage("AI 回傳格式錯誤");
+      } catch (error) {
+        if (!cancelled) setMessage("AI 引擎連線失敗");
+      } finally {
+        if (!cancelled) setAiThinking(false);
       }
-      setAiThinking(false);
+    };
+
+    aiTimer.current = window.setTimeout(() => {
+      run();
     }, 320);
 
     return () => {
+      cancelled = true;
       if (aiTimer.current) window.clearTimeout(aiTimer.current);
     };
   }, [state, onStateChange]);
@@ -78,7 +105,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   };
 
   const onSave = () => {
-    saveToSlots(saveKey, `圍棋AI hard ${size}x${size}`, state);
+    saveToSlots(saveKey, `圍棋AI ${size}x${size}`, state);
     setMessage("已保存存檔（最多 3 筆）");
   };
 
