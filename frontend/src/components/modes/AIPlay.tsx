@@ -95,7 +95,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   };
 
   const onSave = () => {
-    saveToSlots(saveKey, `AI對局 ${difficulty} ${size}x${size}`, state);
+    saveToSlots(saveKey, `圍棋AI ${difficulty} ${size}x${size}`, state);
     setMessage("已保存存檔（最多 3 筆）");
   };
 
@@ -136,10 +136,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
         slots={slots}
         onClose={() => setLoadOpen(false)}
         onSelect={(slot) => {
-          onStateChange({
-            ...createInitialState(slot.state.size),
-            ...slot.state
-          });
+          onStateChange({ ...(createInitialState(size) as GameState), ...(slot.state as GameState) });
           setLoadOpen(false);
           setMessage("已載入 AI 存檔");
         }}

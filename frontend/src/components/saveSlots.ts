@@ -1,20 +1,33 @@
-﻿import type { GameState } from "./goLogic";
+﻿export interface SaveStateLike {
+  size: number;
+  board: Array<Array<string | null>>;
+  turn: string;
+  moves: Array<{ row?: number; col?: number; player?: string; color?: string; pass?: boolean }>;
+  lastMove: { row: number; col: number } | null;
+  gameOver: boolean;
+  winner: string | null;
+  moveNumber?: number;
+  passCount?: number;
+  captures?: { B: number; W: number };
+  koPoint?: { row: number; col: number } | null;
+  previousBoardHash?: string | null;
+}
 
 export interface SaveSlot {
   id: number;
   label: string;
   savedAt: string;
   preview: string;
-  state: Pick<GameState, "size" | "board" | "turn" | "captures" | "moves" | "moveNumber" | "lastMove" | "passCount" | "gameOver" | "winner" | "koPoint" | "previousBoardHash">;
+  state: SaveStateLike;
 }
 
-function stoneColor(cell: "B" | "W" | null): string {
+function stoneColor(cell: string | null): string {
   if (cell === "B") return "#101010";
   if (cell === "W") return "#fafafa";
   return "transparent";
 }
 
-function buildPreviewSvg(state: GameState): string {
+function buildPreviewSvg(state: SaveStateLike): string {
   const sizePx = 170;
   const margin = 14;
   const step = (sizePx - margin * 2) / (state.size - 1);
@@ -30,10 +43,10 @@ function buildPreviewSvg(state: GameState): string {
   for (let r = 0; r < state.size; r += 1) {
     for (let c = 0; c < state.size; c += 1) {
       const cell = state.board[r][c];
-      if (!cell) continue;
+      if (!cell || cell === "") continue;
       const x = margin + c * step;
       const y = margin + r * step;
-      const fill = stoneColor(cell);
+      const fill = stoneColor(cell === "" ? null : cell);
       const stroke = cell === "B" ? "#000" : "#9ca3af";
       stones.push(`<circle cx="${x}" cy="${y}" r="${Math.max(2.5, step * 0.34)}" fill="${fill}" stroke="${stroke}" stroke-width="0.8" />`);
     }
@@ -56,27 +69,14 @@ export function loadSlots(storageKey: string): SaveSlot[] {
   }
 }
 
-export function saveToSlots(storageKey: string, label: string, state: GameState): SaveSlot[] {
+export function saveToSlots(storageKey: string, label: string, state: SaveStateLike): SaveSlot[] {
   const existing = loadSlots(storageKey);
   const newSlot: SaveSlot = {
     id: Date.now(),
     label,
     savedAt: new Date().toLocaleString(),
     preview: buildPreviewSvg(state),
-    state: {
-      size: state.size,
-      board: state.board,
-      turn: state.turn,
-      captures: state.captures,
-      moves: state.moves,
-      moveNumber: state.moveNumber,
-      lastMove: state.lastMove,
-      passCount: state.passCount,
-      gameOver: state.gameOver,
-      winner: state.winner,
-      koPoint: state.koPoint,
-      previousBoardHash: state.previousBoardHash
-    }
+    state
   };
 
   const next = [newSlot, ...existing].slice(0, 3);

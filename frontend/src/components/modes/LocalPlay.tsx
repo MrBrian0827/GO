@@ -51,7 +51,7 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
   };
 
   const onSave = () => {
-    saveToSlots(saveKey, `本地對局 ${size}x${size}`, state);
+    saveToSlots(saveKey, `圍棋本地 ${size}x${size}`, state);
     setMessage("已保存存檔（最多 3 筆）");
   };
 
@@ -77,10 +77,7 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
         slots={slots}
         onClose={() => setLoadOpen(false)}
         onSelect={(slot) => {
-          onStateChange({
-            ...createInitialState(slot.state.size),
-            ...slot.state
-          });
+          onStateChange({ ...(createInitialState(size) as GameState), ...(slot.state as GameState) });
           setLoadOpen(false);
           setMessage("已載入存檔");
         }}
