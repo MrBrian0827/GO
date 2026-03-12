@@ -1,7 +1,7 @@
 ﻿import React, { useMemo, useState } from "react";
 import Board from "../Board";
 import SaveLoadModal from "../SaveLoadModal";
-import { createInitialState, passTurn, playMove, undoLastMove } from "../goLogic";
+import { createInitialState, passTurn, playMove } from "../goLogic";
 import type { GameState } from "../goLogic";
 import { loadSlots, saveToSlots } from "../saveSlots";
 
@@ -34,15 +34,6 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
     setMessage("Pass");
   };
 
-  const onUndo = () => {
-    if (!state.moves.length) {
-      setMessage("目前沒有可悔棋步數");
-      return;
-    }
-    onStateChange(undoLastMove(state, 1));
-    setMessage("已悔棋一步");
-  };
-
   const onReset = () => {
     const ok = window.confirm("確認重新開始本地棋局？");
     if (!ok) return;
@@ -60,9 +51,6 @@ const LocalPlay: React.FC<LocalPlayProps> = ({ size, state, onStateChange, stone
       <h2>本地雙人（{size} x {size}）</h2>
       <p>{message}</p>
       <div className="row-gap">
-        <button type="button" onClick={onUndo}>
-          Undo
-        </button>
         <button type="button" onClick={onSave}>
           保存
         </button>

@@ -2,12 +2,11 @@
 import LocalPlay from "./components/modes/LocalPlay";
 import AIPlay from "./components/modes/AIPlay";
 import Tutorial from "./components/Tutorial";
-import Puzzle from "./components/Puzzle";
 import { createInitialState } from "./components/goLogic";
 import type { GameState } from "./components/goLogic";
 import "./styles/board.css";
 
-type TabKey = "rules" | "local" | "ai" | "tutorial" | "puzzle" | "pvp";
+type TabKey = "rules" | "local" | "ai" | "tutorial" | "pvp";
 
 const BOARD_SIZES = [5, 6, 7, 8, 9, 11, 13, 15, 17, 19];
 
@@ -22,7 +21,7 @@ const App: React.FC = () => {
     <main className="app-shell">
       <header className="app-header">
         <h1>GO - 線上圍棋學習與對弈平台</h1>
-        <p>支援本機對戰、AI 對戰、教學與題庫。</p>
+        <p>支援本機對戰、AI 對戰、教學與連線測試房。</p>
         <details className="resource-menu">
           <summary>推薦資源</summary>
           <div className="resource-list">
@@ -40,13 +39,12 @@ const App: React.FC = () => {
       </header>
 
       <div className="tab-bar">
-        {["rules", "local", "ai", "tutorial", "puzzle", "pvp"].map((t) => (
+        {["rules", "local", "ai", "tutorial", "pvp"].map((t) => (
           <button key={t} type="button" className={tab === t ? "active" : ""} onClick={() => setTab(t as TabKey)}>
             {t === "rules" && "規則"}
             {t === "local" && "本機對戰"}
             {t === "ai" && "AI 對戰"}
             {t === "tutorial" && "教學"}
-            {t === "puzzle" && "題庫"}
             {t === "pvp" && "連線對戰"}
           </button>
         ))}
@@ -99,17 +97,70 @@ const App: React.FC = () => {
       {tab === "local" && <LocalPlay size={size} state={localState} onStateChange={setLocalState} stoneTheme={stoneTheme} />}
       {tab === "ai" && <AIPlay size={size} state={aiState} onStateChange={setAiState} stoneTheme={stoneTheme} />}
       {tab === "tutorial" && <Tutorial />}
-      {tab === "puzzle" && <Puzzle />}
 
       {tab === "pvp" && (
         <section className="mode-panel">
           <h2>連線對戰</h2>
-          <p>此功能需要密碼驗證，後續接入 `/api/auth` 與 WebSocket。</p>
-          <input placeholder="輸入密碼" type="password" />
-          <button type="button">驗證並進入</button>
+          <p>進入測試房前需先輸入密碼。</p>
+          <PvpGate />
         </section>
       )}
     </main>
+  );
+};
+
+const PvpGate: React.FC = () => {
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("未驗證");
+  const [verified, setVerified] = useState(false);
+
+  const onVerify = async () => {
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+      if (!res.ok) throw new Error("bad");
+      setVerified(true);
+      setStatus("驗證成功，可加入測試房");
+    } catch {
+      setVerified(false);
+      setStatus("驗證失敗");
+    }
+  };
+
+  return (
+    <div className="row-gap">
+      <input placeholder="輸入密碼" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button type="button" onClick={onVerify}>
+        驗證
+      </button>
+      <span>{status}</span>
+      {verified && <PvpRoom />}
+    </div>
+  );
+};
+
+const PvpRoom: React.FC = () => {
+  const [status, setStatus] = useState("未連線");
+
+  const connect = () => {
+    const ws = new WebSocket("ws://localhost:3001");
+    ws.onopen = () => {
+      setStatus("已連線");
+      ws.send(JSON.stringify({ type: "join_room", roomId: "test-room" }));
+    };
+    ws.onclose = () => setStatus("已斷線");
+  };
+
+  return (
+    <div className="row-gap">
+      <button type="button" onClick={connect}>
+        加入測試房
+      </button>
+      <span>{status}</span>
+    </div>
   );
 };
 

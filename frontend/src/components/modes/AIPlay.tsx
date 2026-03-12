@@ -2,8 +2,7 @@
 import Board from "../Board";
 import SaveLoadModal from "../SaveLoadModal";
 import { chooseAIMove } from "../AIPlayer";
-import type { AIDifficulty } from "../AIPlayer";
-import { createInitialState, passTurn, playMove, replayMoves, undoLastMove } from "../goLogic";
+import { createInitialState, passTurn, playMove } from "../goLogic";
 import type { GameState } from "../goLogic";
 import { loadSlots, saveToSlots } from "../saveSlots";
 
@@ -15,13 +14,12 @@ interface AIPlayProps {
 }
 
 const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme }) => {
-  const [difficulty, setDifficulty] = useState<AIDifficulty>("medium");
-  const [message, setMessage] = useState("你執黑，AI 執白");
+  const [message, setMessage] = useState("你執黑，AI 執白（最困難模式）");
   const [aiThinking, setAiThinking] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
   const aiTimer = useRef<number | null>(null);
 
-  const saveKey = `go-ai-slots-${size}-${difficulty}`;
+  const saveKey = `go-ai-slots-${size}-hard`;
   const slots = useMemo(() => loadSlots(saveKey), [saveKey, loadOpen, state.moveNumber]);
 
   useEffect(() => {
@@ -29,7 +27,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
 
     setAiThinking(true);
     aiTimer.current = window.setTimeout(() => {
-      const aiMove = chooseAIMove(state, "W", difficulty);
+      const aiMove = chooseAIMove(state, "W", "hard");
       if (!aiMove) {
         onStateChange(passTurn(state));
         setMessage("AI 選擇 Pass");
@@ -40,7 +38,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
       const result = playMove(state, aiMove.row, aiMove.col);
       if (result.ok) {
         onStateChange(result.state);
-        setMessage(`AI 已回應（${difficulty}）`);
+        setMessage("AI 已回應");
       }
       setAiThinking(false);
     }, 320);
@@ -48,7 +46,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
     return () => {
       if (aiTimer.current) window.clearTimeout(aiTimer.current);
     };
-  }, [state, onStateChange, difficulty]);
+  }, [state, onStateChange]);
 
   const onPlay = (row: number, col: number) => {
     if (state.turn !== "B" || aiThinking) {
@@ -72,21 +70,6 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
     setMessage("你選擇 Pass");
   };
 
-  const onUndo = () => {
-    if (!state.moves.length || aiThinking) {
-      setMessage("目前無法悔棋");
-      return;
-    }
-
-    let next = undoLastMove(state, 1);
-    if (next.turn !== "B" && next.moves.length) {
-      next = undoLastMove(next, 1);
-    }
-
-    onStateChange(replayMoves(next.size, next.moves));
-    setMessage("已回退到玩家回合");
-  };
-
   const onReset = () => {
     const ok = window.confirm("確認重新開始 AI 對局？");
     if (!ok) return;
@@ -95,7 +78,7 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
   };
 
   const onSave = () => {
-    saveToSlots(saveKey, `圍棋AI ${difficulty} ${size}x${size}`, state);
+    saveToSlots(saveKey, `圍棋AI hard ${size}x${size}`, state);
     setMessage("已保存存檔（最多 3 筆）");
   };
 
@@ -105,22 +88,6 @@ const AIPlay: React.FC<AIPlayProps> = ({ size, state, onStateChange, stoneTheme 
       <p>{message}</p>
 
       <div className="row-gap">
-        <label htmlFor="ai-difficulty" className="field-row">
-          AI 難度
-          <select
-            id="ai-difficulty"
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as AIDifficulty)}
-            disabled={aiThinking}
-          >
-            <option value="easy">簡單（隨機合法）</option>
-            <option value="medium">中等（棋形評估）</option>
-            <option value="hard">困難（攻防預判）</option>
-          </select>
-        </label>
-        <button type="button" onClick={onUndo}>
-          Undo
-        </button>
         <button type="button" onClick={onSave}>
           保存
         </button>

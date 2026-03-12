@@ -6,6 +6,7 @@ const cors = require("cors");
 const gameRoute = require("../routes/game");
 const tutorialRoute = require("../routes/tutorial");
 const puzzleRoute = require("../routes/puzzle");
+const authRoute = require("../routes/auth");
 const { initWsServer } = require("../websocket/wsServer");
 
 const app = express();
@@ -21,6 +22,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/game", gameRoute);
 app.use("/api/tutorial", tutorialRoute);
 app.use("/api/puzzle", puzzleRoute);
+app.use("/api/auth", authRoute);
 
 const frontendDist = path.join(__dirname, "..", "..", "..", "frontend", "dist");
 app.use(express.static(frontendDist));

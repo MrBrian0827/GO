@@ -18,6 +18,7 @@ interface Lesson {
   target?: { row: number; col: number };
   setup: SetupStone[];
   turn: StoneColor;
+  wrongTip: string;
 }
 
 function buildState(size: number, setup: SetupStone[], turn: StoneColor): GameState {
@@ -41,8 +42,8 @@ function buildState(size: number, setup: SetupStone[], turn: StoneColor): GameSt
 const fallbackLessons: Lesson[] = [
   {
     id: 1,
-    title: "氣",
-    text: "白棋只剩一口氣，找出補最後一口氣的位置。",
+    title: "氣、打吃、提子",
+    text: "白棋只剩一口氣，請找出打吃位置。",
     size: 5,
     target: { row: 2, col: 3 },
     setup: [
@@ -51,41 +52,14 @@ const fallbackLessons: Lesson[] = [
       { row: 3, col: 2, color: "B" },
       { row: 2, col: 1, color: "B" }
     ],
-    turn: "B"
+    turn: "B",
+    wrongTip: "這一步沒有讓對方氣變少，請再看看。"
   },
   {
     id: 2,
-    title: "打吃",
-    text: "先手打吃，讓白棋僅剩一口氣。",
-    size: 6,
-    target: { row: 2, col: 4 },
-    setup: [
-      { row: 2, col: 3, color: "W" },
-      { row: 1, col: 3, color: "B" },
-      { row: 3, col: 3, color: "B" },
-      { row: 2, col: 2, color: "B" }
-    ],
-    turn: "B"
-  },
-  {
-    id: 3,
-    title: "吃子練習",
-    text: "直接吃掉中央白棋。",
-    size: 7,
-    target: { row: 3, col: 4 },
-    setup: [
-      { row: 3, col: 3, color: "W" },
-      { row: 2, col: 3, color: "B" },
-      { row: 4, col: 3, color: "B" },
-      { row: 3, col: 2, color: "B" }
-    ],
-    turn: "B"
-  },
-  {
-    id: 4,
     title: "兩眼活棋",
-    text: "白棋要做兩眼，先下在關鍵眼位。",
-    size: 8,
+    text: "白棋需要做兩眼，先下在眼位。",
+    size: 7,
     target: { row: 3, col: 3 },
     setup: [
       { row: 2, col: 2, color: "W" },
@@ -99,20 +73,24 @@ const fallbackLessons: Lesson[] = [
       { row: 1, col: 3, color: "B" },
       { row: 5, col: 3, color: "B" }
     ],
-    turn: "W"
+    turn: "W",
+    wrongTip: "這不是眼位，兩眼才能確保活棋。"
   },
   {
-    id: 5,
-    title: "基本地形",
-    text: "黑棋先手擴張角地，找最穩定的角上點。",
+    id: 3,
+    title: "基本死活與地形",
+    text: "黑棋要先手做活或封鎖，找關鍵點。",
     size: 9,
-    target: { row: 2, col: 2 },
+    target: { row: 4, col: 4 },
     setup: [
-      { row: 1, col: 1, color: "B" },
-      { row: 1, col: 3, color: "W" },
-      { row: 3, col: 1, color: "W" }
+      { row: 4, col: 3, color: "B" },
+      { row: 3, col: 4, color: "B" },
+      { row: 5, col: 4, color: "B" },
+      { row: 4, col: 5, color: "W" },
+      { row: 2, col: 4, color: "W" }
     ],
-    turn: "B"
+    turn: "B",
+    wrongTip: "這步無法增加生存空間，請再思考。"
   }
 ];
 
@@ -162,9 +140,10 @@ const Tutorial: React.FC = () => {
 
     setState(result.state);
     if (state.moveNumber === 0 && lesson.target && lesson.target.row === row && lesson.target.col === col) {
-      setHint("正確！這是本課第一手重點。可繼續下看看變化。");
+      setHint("正確！這是本課第一手重點。可繼續下看看變化。"
+      );
     } else if (state.moveNumber === 0) {
-      setHint("這手可下，但不是本課第一手重點。可按顯示答案。\n");
+      setHint(lesson.wrongTip);
     } else {
       setHint("繼續嘗試，觀察氣與連接關係。");
     }
@@ -172,7 +151,7 @@ const Tutorial: React.FC = () => {
 
   return (
     <section className="mode-panel">
-      <h2>初學者教學</h2>
+      <h2>新手教學</h2>
       <p>{lesson.text}</p>
       <p>提示：{hint}</p>
       <div className="row-gap" style={{ marginBottom: 12 }}>
@@ -186,18 +165,6 @@ const Tutorial: React.FC = () => {
             第{l.id}課：{l.title}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() =>
-            setHint(
-              lesson.target
-                ? `第一手答案：(${lesson.target.row}, ${lesson.target.col})`
-                : "目前課程未提供固定答案，請先理解概念說明。"
-            )
-          }
-        >
-          顯示答案
-        </button>
       </div>
       <Board state={state} onPlay={onPlay} onPass={() => {}} onReset={() => setState(buildState(lesson.size, lesson.setup, lesson.turn))} />
     </section>
