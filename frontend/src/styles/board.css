@@ -23,74 +23,14 @@ body {
   margin-bottom: 12px;
 }
 
-.home-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.game-card {
-  text-align: left;
-  background: rgba(255, 248, 230, 0.92);
-  border: 1px solid rgba(125, 88, 35, 0.4);
-  border-radius: 14px;
-  padding: 14px;
-  min-height: 120px;
-}
-
-.game-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.game-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .tab-bar {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.tab-bar button.active {
-  background: #5f3f14;
-  color: #fff;
-}
-
-.mode-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
   margin-bottom: 12px;
 }
 
-.mode-tab {
-  min-height: 52px;
-  border: 1px solid #7d5823;
-  border-radius: 12px;
-  background: #f9ecc9;
-  color: #2f1c06;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.mode-tab .badge {
-  font-size: 11px;
-  letter-spacing: 0.6px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(95, 63, 20, 0.12);
-}
-
-.mode-tab.active {
+.tab-bar button.active {
   background: #5f3f14;
   color: #fff;
 }
